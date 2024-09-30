@@ -1,0 +1,25 @@
+server:
+  port: 3022
+
+spring:
+  application:
+    name: cloud-video-clips
+  redis:
+    redisson:
+      config: | 
+        singleServerConfig:
+          address: redis://127.0.0.1:6379
+          password: 123456
+          database: 0
+
+oss:
+  accessKey: 
+  accessSecret: 
+  endpoint: 
+  region: 
+  bucketName: 
+  perFileMaxSize: 50M
+
+vc:
+  tmpDir: /tmp
+  localRoot:
