@@ -1,9 +1,7 @@
 package boluo.videoclips;
 
 import boluo.repositories.URLRepository;
-import boluo.videoclips.commands.Op;
-import boluo.videoclips.commands.OpContext;
-import boluo.videoclips.commands.VideoClipCommand;
+import boluo.videoclips.commands.*;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
@@ -15,7 +13,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.bytedeco.ffmpeg.avcodec.AVPacket;
 import org.bytedeco.javacv.*;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -23,6 +20,8 @@ import java.io.File;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,98 +39,31 @@ public class VideoClipService {
     @Resource
     private VideoClipConfig videoClipConfig;
 
-    @Retryable(maxAttempts = 3)
     public void videoClip(@Valid VideoClipCommand command) {
-        FrameGrabber grabber = null;
-        List<FrameRecorder> recorders = null;
-        try{
-            URL url = urlRepository.toURL(command.getUrl());
-            List<URL> targetUrls = command.getTargetUrl().stream().map(urlRepository::toURL).collect(Collectors.toList());
-            grabber = ffmpegFactory.buildFrameGrabber(url);
-            grabber.start();
-            FrameGrabber grabberFinal = grabber;
-            recorders = targetUrls.stream().map(it -> ffmpegFactory.buildFrameRecorder(it, grabberFinal)).collect(Collectors.toList());
-            for(FrameRecorder recorder : recorders) {
-                recorder.start();
-            }
-            command.getOps().forEach(op -> op.start());
-            log.info("video clips (url {}) start completed", command.getUrl());
-            final long startTime = System.currentTimeMillis();
-            long preTime = startTime;
-            Frame frame = null;
-            OpContext opContext = new OpContext();
-            while((frame = grabber.grab()) != null) {
-                for(Op op : command.getOps()) {
-                    frame = op.doFilter(opContext, frame);
-                    if(frame == null) {
-                        break;
-                    }
-                }
-                if(frame == null) {
-                    continue;
-                }
-                for(FrameRecorder recorder : recorders) {
-                    recorder.record(frame);
-                }
-                if(System.currentTimeMillis() - preTime > 10 * 1000) {
-                    preTime = System.currentTimeMillis();
-                    log.info("do videoClip url = {}, run time = {} frame.timestamp = {}",
-                            command.getUrl(), DateUtil.formatBetween(preTime - startTime), DateUtil.formatBetween(frame.timestamp/1000));
-                }
-            }
-            command.getOps().forEach(op -> op.close());
-            //设置是否处理完成
-            for(FrameRecorder recorder : recorders) {
-                if(recorder instanceof LocalFFmpegFrameRecorder localRecorder) {
-                    localRecorder.setComplete(true);
-                }
-            }
-            log.info("video clips (url {}) record completed", command.getUrl());
-        }catch (Throwable e) {
-            throw new RuntimeException(e);
-        }finally {
-            if(grabber != null) {
-                try {
-                    grabber.close();
-                } catch (FrameGrabber.Exception e) {
-                    log.warn("FFmpegFrameGrabber close fail", e);
-                }
-            }
-            if(recorders != null) {
-                recorders.forEach(it -> {
-                    try {
-                        it.close();
-                    } catch (FrameRecorder.Exception e) {
-                        log.warn("FFmpegFrameRecorder close fail", e);
-                    }
-                });
-            }
-            log.info("video clips (url {}) output completed", command.getUrl());
-        }
-    }
+        //剪辑
+        URL url = doVideoClip(command.getUrl(), command.getOps(), command.getTargetUrls());
+        //合并
 
-    //@Retryable(maxAttempts = 3)
-    public void videoClipV2(@Valid VideoClipCommand command) {
-        URL url = doVideoClip(command);
-        transcode(url, command.getTargetUrl());
+        //转码
+        transcode(url, command.getTargetUrls());
     }
 
     /**
      * 视频剪辑
      * 返回剪辑后的视频，没有剪辑操作返回源视频地址
      * */
-    protected URL doVideoClip(VideoClipCommand command) {
-        if(CollectionUtil.isEmpty(command.getOps())) {
+    protected URL doVideoClip(final String originUrl, final List<Op> opList, final List<String> targets) {
+        if(CollectionUtil.isEmpty(opList)) {
             //没有剪辑操作，源视频地址返回
-            return urlRepository.toURL(command.getUrl());
+            return urlRepository.toURL(originUrl);
         }
         FrameGrabber grabber = null;
         FrameRecorder recorder = null;
         try {
-            URL url = urlRepository.toURL(command.getUrl());
+            URL url = urlRepository.toURL(originUrl);
             grabber = ffmpegFactory.buildFrameGrabber(url);
             grabber.start();
-            List<URL> targetUrls = command.getTargetUrl().stream().map(it -> urlRepository.toURL(it)).collect(Collectors.toList());
+            List<URL> targetUrls = targets.stream().map(it -> urlRepository.toURL(it)).toList();
             //如果没有本地剪辑文件，创建本地剪辑文件
             String suffix = FileUtil.getSuffix(url.getPath());
             Optional<URL> localURLOpt = targetUrls.stream().filter(it -> "file".equalsIgnoreCase(it.getProtocol())
@@ -145,31 +77,27 @@ public class VideoClipService {
             }
             recorder = ffmpegFactory.buildFrameRecorder(localURL, grabber);
             recorder.start();
-            command.getOps().forEach(it -> it.start());
-            log.info("video clips (url {}) start completed", command.getUrl());
+            List<Op> ops = new ArrayList<>(opList.size() + 1);
+            ops.addAll(opList);
+            ops.sort(Comparator.comparing(Op::order));
+            ops.add(new RecordOp(recorder));
+            ops.forEach(Op::start);
+            log.info("video clips (url {}) start completed", originUrl);
             final long startTime = System.currentTimeMillis();
             long preTime = startTime;
+            OpChain opChain = new OpChain(ops);
             OpContext opContext = new OpContext();
             Frame frame;
             while((frame = grabber.grab()) != null) {
-                for(Op op : command.getOps()) {
-                    frame = op.doFilter(opContext, frame);
-                    if(frame == null) {
-                        break;
-                    }
-                }
-                if(frame == null) {
-                    continue;
-                }
-                recorder.record(frame);
                 if(System.currentTimeMillis() - preTime > 10 * 1000) {
                     preTime = System.currentTimeMillis();
-                    log.info("do videoClip url = {}, run time = {} frame.timestamp = {}",
-                            command.getUrl(), DateUtil.formatBetween(preTime - startTime), DateUtil.formatBetween(frame.timestamp/1000));
+                    log.info("do videoClip url = {}, run time = {} frame.timestamp = {}", originUrl, DateUtil.formatBetween(preTime - startTime), DateUtil.formatBetween(frame.timestamp/1000));
                 }
+                opChain.restart();
+                opChain.doFilter(opContext, frame);
             }
-            command.getOps().forEach(it -> it.close());
-            log.info("video clips (url {}) record completed", command.getUrl());
+            ops.forEach(Op::close);
+            log.info("video clips (url {}) record completed", originUrl);
             return localURL;
         }catch (Throwable e) {
             throw new RuntimeException(e);

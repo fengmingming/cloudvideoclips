@@ -10,7 +10,7 @@
   </parent>
 
   <groupId>boluo</groupId>
-  <artifactId>cloudvideoclip</artifactId>
+  <artifactId>cloudvideoclips</artifactId>
   <version>1.0-SNAPSHOT</version>
 
   <name>cloudvideoclip</name>

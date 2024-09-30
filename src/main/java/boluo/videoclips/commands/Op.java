@@ -1,5 +1,6 @@
 package boluo.videoclips.commands;
 
+import boluo.videoclips.OpChain;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
@@ -10,10 +11,12 @@ import org.bytedeco.javacv.Frame;
 @JsonSubTypes({@JsonSubTypes.Type(value = TrimOp.class, name = "trim")})
 public abstract class Op {
 
-    public abstract Frame doFilter(OpContext context, Frame frame);
+    public abstract void doFilter(OpContext context, Frame frame, OpChain chain);
 
     public void start() {}
 
     public void close() {}
+
+    public int order() {return 0;}
 
 }

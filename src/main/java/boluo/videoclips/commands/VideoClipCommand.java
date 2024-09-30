@@ -29,7 +29,7 @@ public class VideoClipCommand {
      * */
     @Size(min = 1, message = "targetUrl size is 0")
     @NotNull
-    private List<String> targetUrl;
+    private List<String> targetUrls;
     private String callbackUrl;
 
 }

@@ -83,7 +83,7 @@ public class VideoClipRest implements DisposableBean, InitializingBean {
         if(req.getCommands().stream().anyMatch(it -> !supportedUrlSuffix.contains(FileUtil.getSuffix(it.getUrl())))) {
             return ResVo.error("只支持mp4格式的文件剪辑");
         }
-        if(req.getCommands().stream().flatMap(it -> it.getTargetUrl().stream()).anyMatch(it ->
+        if(req.getCommands().stream().flatMap(it -> it.getTargetUrls().stream()).anyMatch(it ->
                 !supportedTargetSuffix.contains(FileUtil.getSuffix(it)))) {
             return ResVo.error("只支持mp4或m3u8格式的文件输出");
         }
@@ -99,7 +99,7 @@ public class VideoClipRest implements DisposableBean, InitializingBean {
                         return es.submit(() -> {
                             VideoClipCallbackService.CallbackReq callbackReq = new VideoClipCallbackService.CallbackReq();
                             try{
-                                videoClipService.videoClipV2(command);
+                                videoClipService.videoClip(command);
                                 callbackReq.setStatus(true);
                                 return true;
                             }catch (Throwable e) {

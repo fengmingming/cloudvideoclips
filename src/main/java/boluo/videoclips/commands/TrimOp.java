@@ -1,5 +1,6 @@
 package boluo.videoclips.commands;
 
+import boluo.videoclips.OpChain;
 import lombok.Getter;
 import lombok.Setter;
 import org.bytedeco.javacv.Frame;
@@ -15,12 +16,12 @@ public class TrimOp extends Op {
     private long endTime = Long.MAX_VALUE;
 
     @Override
-    public Frame doFilter(OpContext context, Frame frame) {
+    public void doFilter(OpContext context, Frame frame, OpChain chain) {
         long timestamp = frame.timestamp;
         if(timestamp >= startTime && timestamp <= endTime) {
-            return null;
+            return;
         }
-        return frame;
+        chain.doFilter(context, frame);
     }
 
 }

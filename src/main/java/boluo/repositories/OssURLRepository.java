@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -36,6 +37,7 @@ import java.util.Optional;
  * */
 @Setter
 @Component
+@ConditionalOnProperty(value = "oss.enable", matchIfMissing = false)
 public class OssURLRepository implements URLRepository, InitializingBean, DisposableBean {
 
     @Resource
