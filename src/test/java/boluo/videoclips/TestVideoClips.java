@@ -35,7 +35,7 @@ public class TestVideoClips {
     }
 
     @Test
-    public void testWaterMark() {
+    public void testWatermark() {
         VideoClipsCommand command = new VideoClipsCommand();
         WatermarkOp op = new WatermarkOp();
         op.setImageUrl("https://docbook.com.cn/_nuxt/img/docbook-header-logo.ab2d9eb.png");
@@ -48,5 +48,7 @@ public class TestVideoClips {
         command.setTargetUrls(List.of("/vc_watermark.mp4"));
         clipService.videoClip(command);
     }
+
+
 
 }

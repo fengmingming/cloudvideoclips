@@ -24,6 +24,7 @@ public class VideoClipsCommand {
     @Valid
     @NotNull
     private List<Op> ops = List.of();
+    private VideoMixCommand mix;
     /**
      * 目标文件地址
      * */

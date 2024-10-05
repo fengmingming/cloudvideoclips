@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 @RestController
 @Slf4j
@@ -38,13 +37,13 @@ public class VideoClipsRest implements DisposableBean, InitializingBean {
     @Resource
     private VideoClipsCallbackService clipCallbackService;
 
-    private ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
+    private final ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
 
-    private List<String> supportedUrlSuffix = List.of("mp4", "MP4");
+    private final List<String> supportedUrlSuffix = List.of("mp4", "MP4");
 
-    private List<String> supportedTargetSuffix = List.of("mp4", "MP4", "m3u8", "M3U8");
+    private final List<String> supportedTargetSuffix = List.of("mp4", "MP4", "m3u8", "M3U8");
 
-    private ScheduledExecutorService watchdog = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService watchdog = Executors.newSingleThreadScheduledExecutor();
 
     @Override
     public void destroy() throws Exception {
@@ -112,15 +111,15 @@ public class VideoClipsRest implements DisposableBean, InitializingBean {
                                 }
                             }
                         });
-                    }).collect(Collectors.toList());
-                    boolean runState = fs.stream().map(it -> {
-                        try{
+                    }).toList();
+                    boolean runState = fs.stream().allMatch(it -> {
+                        try {
                             return it.get();
-                        }catch (Throwable e) {
+                        } catch (Throwable e) {
                             log.error("future get fail", e);
                         }
                         return true;
-                    }).noneMatch(it -> it == false);
+                    });
                     if(StrUtil.isNotBlank(req.getCallbackUrl())) {
                         VideoClipsCallbackService.CallbackReq callbackReq = new VideoClipsCallbackService.CallbackReq();
                         callbackReq.setStatus(runState);

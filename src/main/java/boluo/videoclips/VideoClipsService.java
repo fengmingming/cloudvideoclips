@@ -43,7 +43,15 @@ public class VideoClipsService {
         //剪辑
         URL url = doVideoClip(command.getUrl(), command.getOps(), command.getTargetUrls());
         //合并
-
+        if(command.getMix() != null && CollectionUtil.isNotEmpty(command.getMix().getUrls())) {
+            List<URL> mixUrls = null;
+            if(command.getMix().isJoinVC()) {
+                mixUrls = command.getMix().getUrls().stream().map(it -> doVideoClip(it, command.getOps(), List.of())).toList();
+            }else {
+                mixUrls = command.getMix().getUrls().stream().map(it -> urlRepository.toURL(it)).toList();
+            }
+            url = mixVideo(url, mixUrls, command.getMix().getJoinWay());
+        }
         //转码
         transcode(url, command.getTargetUrls());
     }
@@ -127,7 +135,7 @@ public class VideoClipsService {
                 File file = new File(url.getPath());
                 if(!FileUtil.isSub(videoClipConfig.getTmpFileDir(), file)) {
                     targetUrls = targetUrls.stream().filter(it -> !(url.getProtocol().equalsIgnoreCase(it.getProtocol())
-                        && url.getPath().equals(it.getPath()))).collect(Collectors.toList());
+                        && url.getPath().equals(it.getPath()))).toList();
                 }
             }
             for(URL targetUrl : targetUrls) {
@@ -197,6 +205,22 @@ public class VideoClipsService {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected URL mixVideo(URL url, List<URL> urls, int joinWay) {
+        return switch (joinWay) {
+            case 1 -> concatVideo(url, urls);
+            case 2 -> overlying(url, urls);
+            default -> throw new IllegalArgumentException("joinWay=" + joinWay + " is not supported");
+        };
+    }
+
+    protected URL concatVideo(URL url, List<URL> urls) {
+        return null;
+    }
+
+    protected URL overlying(URL url, List<URL> urls) {
+        return null;
     }
 
 }
