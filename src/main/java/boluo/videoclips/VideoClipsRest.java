@@ -1,7 +1,7 @@
 package boluo.videoclips;
 
 import boluo.common.ResVo;
-import boluo.videoclips.commands.VideoClipCommand;
+import boluo.videoclips.commands.VideoClipsCommand;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
@@ -26,17 +26,17 @@ import java.util.stream.Collectors;
 
 @RestController
 @Slf4j
-public class VideoClipRest implements DisposableBean, InitializingBean {
+public class VideoClipsRest implements DisposableBean, InitializingBean {
 
     @Setter
     @Resource
-    private VideoClipService videoClipService;
+    private VideoClipsService videoClipService;
     @Setter
     @Resource
     private RedissonClient redissonClient;
     @Setter
     @Resource
-    private VideoClipCallbackService clipCallbackService;
+    private VideoClipsCallbackService clipCallbackService;
 
     private ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 3);
 
@@ -74,7 +74,7 @@ public class VideoClipRest implements DisposableBean, InitializingBean {
         @NotNull(message = "commands is null")
         @Size(min = 1, message = "commands size is 0")
         @Valid
-        private List<VideoClipCommand> commands;
+        private List<VideoClipsCommand> commands;
         private String callbackUrl;
     }
 
@@ -97,7 +97,7 @@ public class VideoClipRest implements DisposableBean, InitializingBean {
                 try{
                     List<Future<Boolean>> fs = req.getCommands().stream().map(command -> {
                         return es.submit(() -> {
-                            VideoClipCallbackService.CallbackReq callbackReq = new VideoClipCallbackService.CallbackReq();
+                            VideoClipsCallbackService.CallbackReq callbackReq = new VideoClipsCallbackService.CallbackReq();
                             try{
                                 videoClipService.videoClip(command);
                                 callbackReq.setStatus(true);
@@ -122,7 +122,7 @@ public class VideoClipRest implements DisposableBean, InitializingBean {
                         return true;
                     }).noneMatch(it -> it == false);
                     if(StrUtil.isNotBlank(req.getCallbackUrl())) {
-                        VideoClipCallbackService.CallbackReq callbackReq = new VideoClipCallbackService.CallbackReq();
+                        VideoClipsCallbackService.CallbackReq callbackReq = new VideoClipsCallbackService.CallbackReq();
                         callbackReq.setStatus(runState);
                         clipCallbackService.callback(req.getCallbackUrl(), callbackReq);
                     }

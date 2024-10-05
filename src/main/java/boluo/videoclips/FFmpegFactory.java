@@ -16,7 +16,7 @@ import java.net.URL;
 public class FFmpegFactory {
 
     @Resource
-    private VideoClipConfig vcConfig;
+    private VideoClipsConfig vcConfig;
 
     public FrameGrabber buildFrameGrabber(URL url) {
         FFmpegFrameGrabber grabber = null;

@@ -11,7 +11,7 @@ import java.util.List;
 
 @Setter
 @Getter
-public class VideoClipCommand {
+public class VideoClipsCommand {
 
     /**
      * 源文件地址

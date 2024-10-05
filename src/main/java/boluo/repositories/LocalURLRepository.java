@@ -1,6 +1,6 @@
 package boluo.repositories;
 
-import boluo.videoclips.VideoClipConfig;
+import boluo.videoclips.VideoClipsConfig;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
 import jakarta.annotation.Resource;
@@ -16,7 +16,7 @@ import java.net.URL;
 public class LocalURLRepository implements URLRepository {
 
    @Resource
-   private VideoClipConfig vcConfig;
+   private VideoClipsConfig vcConfig;
 
     @Override
     public boolean support(URL url) {

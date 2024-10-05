@@ -30,16 +30,16 @@ import java.util.stream.Collectors;
 @Validated
 @Slf4j
 @Setter
-public class VideoClipService {
+public class VideoClipsService {
 
     @Resource
     private FFmpegFactory ffmpegFactory;
     @Resource
     private URLRepository urlRepository;
     @Resource
-    private VideoClipConfig videoClipConfig;
+    private VideoClipsConfig videoClipConfig;
 
-    public void videoClip(@Valid VideoClipCommand command) {
+    public void videoClip(@Valid VideoClipsCommand command) {
         //剪辑
         URL url = doVideoClip(command.getUrl(), command.getOps(), command.getTargetUrls());
         //合并

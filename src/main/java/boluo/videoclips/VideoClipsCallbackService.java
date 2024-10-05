@@ -10,7 +10,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 @Slf4j
-public class VideoClipCallbackService {
+public class VideoClipsCallbackService {
 
     @Setter
     @Getter

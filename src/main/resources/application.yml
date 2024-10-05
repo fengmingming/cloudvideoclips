@@ -8,11 +8,12 @@ spring:
     redisson:
       config: | 
         singleServerConfig:
-          address: redis://127.0.0.1:6379
-          password: 123456
+          address: redis://127.0.0.1:6314
+          password: 
           database: 0
 
 oss:
+  enable: false
   accessKey: 
   accessSecret: 
   endpoint: 

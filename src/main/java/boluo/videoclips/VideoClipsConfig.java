@@ -13,7 +13,7 @@ import java.io.File;
 @ConfigurationProperties(prefix = "vc")
 @Setter
 @Getter
-public class VideoClipConfig implements InitializingBean {
+public class VideoClipsConfig implements InitializingBean {
 
     /**
      * 临时文件目录
