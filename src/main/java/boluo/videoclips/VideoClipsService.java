@@ -1,11 +1,14 @@
 package boluo.videoclips;
 
+import boluo.common.FileTool;
 import boluo.repositories.URLRepository;
-import boluo.videoclips.commands.*;
+import boluo.videoclips.commands.Op;
+import boluo.videoclips.commands.OpContext;
+import boluo.videoclips.commands.RecordOp;
+import boluo.videoclips.commands.VideoClipsCommand;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.URLUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -16,15 +19,10 @@ import org.bytedeco.javacv.*;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import java.io.File;
 import java.net.URL;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Validated
@@ -37,20 +35,20 @@ public class VideoClipsService {
     @Resource
     private URLRepository urlRepository;
     @Resource
-    private VideoClipsConfig videoClipConfig;
+    private MixVideoService mixVideoService;
 
     public void videoClip(@Valid VideoClipsCommand command) {
         //剪辑
-        URL url = doVideoClip(command.getUrl(), command.getOps(), command.getTargetUrls());
+        URL url = doVideoClip(command.getUrl(), command.getOps());
         //合并
         if(command.getMix() != null && CollectionUtil.isNotEmpty(command.getMix().getUrls())) {
-            List<URL> mixUrls = null;
+            List<URL> mixUrls;
             if(command.getMix().isJoinVC()) {
-                mixUrls = command.getMix().getUrls().stream().map(it -> doVideoClip(it, command.getOps(), List.of())).toList();
+                mixUrls = command.getMix().getUrls().stream().map(it -> doVideoClip(it, command.getOps())).toList();
             }else {
                 mixUrls = command.getMix().getUrls().stream().map(it -> urlRepository.toURL(it)).toList();
             }
-            url = mixVideo(url, mixUrls, command.getMix().getJoinWay());
+            url = mixVideoService.mixVideo(url, mixUrls, command.getMix().getJoinWay());
         }
         //转码
         transcode(url, command.getTargetUrls());
@@ -60,7 +58,7 @@ public class VideoClipsService {
      * 视频剪辑
      * 返回剪辑后的视频，没有剪辑操作返回源视频地址
      * */
-    protected URL doVideoClip(final String originUrl, final List<Op> opList, final List<String> targets) {
+    protected URL doVideoClip(final String originUrl, final List<Op> opList) {
         if(CollectionUtil.isEmpty(opList)) {
             //没有剪辑操作，源视频地址返回
             return urlRepository.toURL(originUrl);
@@ -71,18 +69,9 @@ public class VideoClipsService {
             URL url = urlRepository.toURL(originUrl);
             grabber = ffmpegFactory.buildFrameGrabber(url);
             grabber.start();
-            List<URL> targetUrls = targets.stream().map(it -> urlRepository.toURL(it)).toList();
             //如果没有本地剪辑文件，创建本地剪辑文件
             String suffix = FileUtil.getSuffix(url.getPath());
-            Optional<URL> localURLOpt = targetUrls.stream().filter(it -> "file".equalsIgnoreCase(it.getProtocol())
-                    && suffix.equalsIgnoreCase(FileUtil.getSuffix(it.getPath()))).findFirst();
-            URL localURL;
-            if(localURLOpt.isPresent()) {
-                localURL = localURLOpt.get();
-            }else {
-                localURL = URLUtil.url(buildTmpFile(suffix));
-                log.info("create tmp file url = {}", localURL.toString());
-            }
+            URL localURL = URLUtil.url(FileTool.buildTmpFile(suffix));
             recorder = ffmpegFactory.buildFrameRecorder(localURL, grabber);
             recorder.start();
             List<Op> ops = new ArrayList<>(opList.size() + 1);
@@ -129,27 +118,14 @@ public class VideoClipsService {
 
     protected void transcode(URL url, List<String> targets) {
         try{
-            List<URL> targetUrls = targets.stream().map(it -> urlRepository.toURL(it)).collect(Collectors.toList());
-            if("file".equalsIgnoreCase(url.getProtocol())) {
-                //去掉本地在剪辑的时候已经生成的文件
-                File file = new File(url.getPath());
-                if(!FileUtil.isSub(videoClipConfig.getTmpFileDir(), file)) {
-                    targetUrls = targetUrls.stream().filter(it -> !(url.getProtocol().equalsIgnoreCase(it.getProtocol())
-                        && url.getPath().equals(it.getPath()))).toList();
-                }
-            }
+            List<URL> targetUrls = targets.stream().map(it -> urlRepository.toURL(it)).toList();
             for(URL targetUrl : targetUrls) {
                 doTranscode(url, targetUrl);
             }
         }catch (Throwable e) {
             throw new RuntimeException(e);
         }finally {
-            if("file".equalsIgnoreCase(url.getProtocol())) {
-                File file = new File(url.getPath());
-                if(FileUtil.isSub(videoClipConfig.getTmpFileDir(), file)) {
-                    file.delete();
-                }
-            }
+            FileTool.deleteLocalTmpFile(url);
         }
     }
 
@@ -192,12 +168,6 @@ public class VideoClipsService {
         }
     }
 
-    private String buildTmpFile(String suffix) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        return String.format("%s/%s/%s.%s", videoClipConfig.getTmpDir(), LocalDateTime.now().format(formatter),
-                IdUtil.fastSimpleUUID(), suffix);
-    }
-
     public long getLengthTime(String url) {
         try(FFmpegFrameGrabber grabber = (FFmpegFrameGrabber) ffmpegFactory.buildFrameGrabber(urlRepository.toURL(url))) {
             grabber.start();
@@ -205,22 +175,6 @@ public class VideoClipsService {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
-    }
-
-    protected URL mixVideo(URL url, List<URL> urls, int joinWay) {
-        return switch (joinWay) {
-            case 1 -> concatVideo(url, urls);
-            case 2 -> overlying(url, urls);
-            default -> throw new IllegalArgumentException("joinWay=" + joinWay + " is not supported");
-        };
-    }
-
-    protected URL concatVideo(URL url, List<URL> urls) {
-        return null;
-    }
-
-    protected URL overlying(URL url, List<URL> urls) {
-        return null;
     }
 
 }
