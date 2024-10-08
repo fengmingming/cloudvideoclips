@@ -9,7 +9,8 @@ import org.bytedeco.javacv.Frame;
 @Getter
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "opName")
 @JsonSubTypes({@JsonSubTypes.Type(value = TrimOp.class, name = "trim"),
-        @JsonSubTypes.Type(value = WatermarkOp.class, name = "watermark"),})
+        @JsonSubTypes.Type(value = WatermarkOp.class, name = "watermark"),
+        @JsonSubTypes.Type(value = SpeedOp.class, name = "speed"),})
 public abstract class Op {
 
     public abstract void doFilter(OpContext context, Frame frame, OpChain chain);
