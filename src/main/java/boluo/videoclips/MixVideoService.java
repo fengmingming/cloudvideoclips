@@ -86,29 +86,46 @@ public class MixVideoService {
      * 音频合并，多个画面重新布局
      * */
     protected URL overlying(URL url, List<URL> urls) {
-        List<URL> urlList = new ArrayList<>();
-        urlList.add(url);
-        urlList.addAll(urls);
+        FrameGrabber grabber = null;
         List<FrameGrabber> grabbers = null;
         FrameRecorder recorder = null;
         try{
-            grabbers = urlList.stream().map(it -> ffmpegFactory.buildFrameGrabber(it)).toList();
+            grabber = ffmpegFactory.buildFrameGrabber(url);
+            grabber.start();
+            grabbers = urls.stream().map(it -> ffmpegFactory.buildFrameGrabber(it)).toList();
             for(FrameGrabber g : grabbers) {
                 g.start();
             }
             URL localUrl = URLUtil.url(FileTool.buildTmpFile(FileUtil.getSuffix(url.getPath())));
-            recorder = ffmpegFactory.buildFrameRecorder(url, grabbers.get(0));
-
+            recorder = ffmpegFactory.buildFrameRecorder(url, grabber);
+            recorder.start();
+            Frame frame;
+            List<Frame> frames = new ArrayList<>(urls.size() + 1);
+            while((frame = grabber.grab()) != null) {
+                frames.add(frame);
+                for(FrameGrabber g : grabbers) {
+                    frames.add(g.grab());
+                }
+                assemble(frames);
+                frames.clear();
+            }
             return localUrl;
         }catch (Throwable e) {
             throw new RuntimeException(e);
         }finally {
+            if(grabber != null) {
+                try {
+                    grabber.close();
+                } catch (FrameGrabber.Exception e) {
+                    log.warn("overlying video grabber close fail url {}", url, e);
+                }
+            }
             if(grabbers != null) {
                 for(FrameGrabber g : grabbers) {
                     try {
                         g.close();
                     } catch (FrameGrabber.Exception e) {
-                        log.warn("overlying video grabber close fail", e);
+                        log.warn("overlying video grabbers close fail", e);
                     }
                 }
             }
@@ -131,6 +148,10 @@ public class MixVideoService {
         while((frame = grabber.grab()) != null) {
             recorder.record(frame);
         }
+    }
+
+    protected void assemble(List<Frame> frames) {
+
     }
 
 }
