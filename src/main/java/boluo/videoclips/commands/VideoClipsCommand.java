@@ -24,11 +24,12 @@ public class VideoClipsCommand {
     @Valid
     @NotNull
     private List<Op> ops = List.of();
+    @Valid
     private VideoMixCommand mix;
     /**
      * 目标文件地址
      * */
-    @Size(min = 1, message = "targetUrl size is 0")
+    @Size(min = 1, message = "targetUrl is empty")
     @NotNull
     private List<String> targetUrls;
     private String callbackUrl;

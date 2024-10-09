@@ -66,19 +66,28 @@ public class VideoClipsService {
         FrameGrabber grabber = null;
         FrameRecorder recorder = null;
         try {
-            URL url = urlRepository.toURL(originUrl);
-            grabber = ffmpegFactory.buildFrameGrabber(url);
-            grabber.start();
-            //如果没有本地剪辑文件，创建本地剪辑文件
-            String suffix = FileUtil.getSuffix(url.getPath());
-            URL localURL = URLUtil.url(FileTool.buildTmpFile(suffix));
-            recorder = ffmpegFactory.buildFrameRecorder(localURL, grabber);
-            recorder.start();
             List<Op> ops = new ArrayList<>(opList.size() + 1);
             ops.addAll(opList);
             ops.sort(Comparator.comparing(Op::order));
-            ops.add(new RecordOp(recorder));
             ops.forEach(Op::start);
+            URL url = urlRepository.toURL(originUrl);
+            grabber = ffmpegFactory.buildFrameGrabber(url);
+            grabber.start();
+            List<FrameGrabStarter> frameGrabStarters = ops.stream().filter(it -> it instanceof FrameGrabStarter).map(it -> (FrameGrabStarter)it).toList();
+            for(FrameGrabStarter fgs : frameGrabStarters) {
+                fgs.afterStart(grabber);
+            }
+            String suffix = FileUtil.getSuffix(url.getPath());
+            URL localURL = URLUtil.url(FileTool.buildTmpFile(suffix));
+            recorder = ffmpegFactory.buildFrameRecorder(localURL, grabber);
+            List<FrameRecordStarter> frameRecordStarters = ops.stream().filter(it -> it instanceof FrameRecordStarter).map(it -> (FrameRecordStarter) it).toList();
+            for(FrameRecordStarter frs : frameRecordStarters) {
+                frs.beforeStart(recorder);
+            }
+            recorder.start();
+            RecordOp op = new RecordOp(recorder);
+            op.start();
+            ops.add(op);
             log.info("video clips (url {}) start completed", originUrl);
             final long startTime = System.currentTimeMillis();
             long preTime = startTime;
