@@ -4,6 +4,8 @@ import org.bytedeco.javacv.FrameRecorder;
 
 public interface FrameRecordStarter {
 
-    public void beforeStart(FrameRecorder recorder);
+    default void beforeStart(FrameRecorder recorder) {}
+
+    default void afterStart(FrameRecorder recorder) {}
 
 }

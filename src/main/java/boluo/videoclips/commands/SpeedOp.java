@@ -1,11 +1,13 @@
 package boluo.videoclips.commands;
 
+import boluo.videoclips.FrameRecordStarter;
 import boluo.videoclips.OpChain;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameRecorder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +15,7 @@ import java.util.List;
 /**
  * 播放速度操作
  * */
-public class SpeedOp extends Op{
+public class SpeedOp extends Op implements FrameRecordStarter {
 
     @NotBlank
     @Pattern(regexp = "0\\.25|0\\.5|0\\.75|1|1\\.25|1\\.5|1\\.75|2|3", message = "value can only be 0.25,0.5,0.75,1,1.25,1.5,1.75,2,3")
@@ -24,9 +26,17 @@ public class SpeedOp extends Op{
     private int cycle;
     private List<Integer> points;
     private int index;
+    private double perFrameTime;
+    private long count;
+
+    @Override
+    public void afterStart(FrameRecorder recorder) {
+        this.perFrameTime = (1000 * 1000 / recorder.getFrameRate());
+    }
 
     @Override
     public void start() {
+        count = 0;
         points = null;
         times = 0;
         cycle = 0;
@@ -74,17 +84,22 @@ public class SpeedOp extends Op{
 
     @Override
     public void doFilter(OpContext context, Frame frame, OpChain chain) {
-        if(frame.timestamp < startTime || frame.timestamp > endTime) {
+        long timestamp = frame.timestamp;
+        if(timestamp < startTime || timestamp > endTime) {
+            frame.timestamp = (long)(count * perFrameTime + timestamp);
             chain.doFilter(context, frame);
             return;
         }
         if(points == null) {//慢放
             index++;
             if(index == cycle) {
+                frame.timestamp = (long)(count++ * perFrameTime + timestamp);
                 List<Frame> frames = new ArrayList<>(times);
                 frames.add(frame);
                 for(int i = times - cycle; i > 0; i--) {
-                    frames.add(frame.clone());
+                    Frame f = frame.clone();
+                    f.timestamp = (long)(count++ * perFrameTime + timestamp);
+                    frames.add(f);
                 }
                 index = 0;
                 chain.doFilter(context, frames);
@@ -92,6 +107,7 @@ public class SpeedOp extends Op{
         }else {//加速
             if(index < cycle) {
                 if(points.contains(index)) {
+                    frame.timestamp = (long)(count-- * perFrameTime + timestamp);
                     chain.doFilter(context, frame);
                 }
             }

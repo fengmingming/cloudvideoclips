@@ -85,6 +85,9 @@ public class VideoClipsService {
                 frs.beforeStart(recorder);
             }
             recorder.start();
+            for(FrameRecordStarter frs : frameRecordStarters) {
+                frs.afterStart(recorder);
+            }
             RecordOp op = new RecordOp(recorder);
             op.start();
             ops.add(op);
