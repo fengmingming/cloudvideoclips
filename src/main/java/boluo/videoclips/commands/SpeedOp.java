@@ -42,73 +42,83 @@ public class SpeedOp extends Op implements FrameRecordStarter {
         cycle = 0;
         index = 0;
         switch (value) {
-            case "0.25":
+            case "0.25" -> {
                 times = 4;
                 cycle = 1;
-                break;
-            case "0.5":
+            }
+            case "0.5" -> {
                 times = 2;
                 cycle = 1;
-                break;
-            case "0.75":
+            }
+            case "0.75" -> {
                 times = 4;
                 cycle = 3;
-                break;
-            case "1":
+            }
+            case "1" -> {
                 cycle = 1;
                 points = List.of(0);
-                break;
-            case "1.25":
+            }
+            case "1.25" -> {
                 cycle = 5;
                 points = List.of(0, 1, 2, 3);
-                break;
-            case "1.5":
+            }
+            case "1.5" -> {
                 cycle = 3;
                 points = List.of(0, 1);
-                break;
-            case "1.75":
+            }
+            case "1.75" -> {
                 cycle = 7;
                 points = List.of(0, 1, 2, 3);
-                break;
-            case "2":
+            }
+            case "2" -> {
                 cycle = 2;
                 points = List.of(0);
-                break;
-            case "3":
+            }
+            case "3" -> {
                 cycle = 3;
                 points = List.of(0);
-                break;
-            default: throw new IllegalArgumentException("value can only be 0.25,0.5,0.75,1,1.25,1.5,1.75,2,3");
+            }
+            default -> throw new IllegalArgumentException("value can only be 0.25,0.5,0.75,1,1.25,1.5,1.75,2,3");
         }
     }
 
     @Override
     public void doFilter(OpContext context, Frame frame, OpChain chain) {
         long timestamp = frame.timestamp;
-        if(timestamp < startTime || timestamp > endTime) {
+        if(timestamp <= startTime || timestamp >= endTime) {
             frame.timestamp = (long)(count * perFrameTime + timestamp);
+            if(frame.timestamp < 0) {
+                frame.timestamp = 0;
+            }
             chain.doFilter(context, frame);
             return;
         }
         if(points == null) {//慢放
+            List<Frame> frames = new ArrayList<>();
+            if(index < cycle) {
+                frame.timestamp = (long)(count * perFrameTime + timestamp);
+                frames.add(frame);
+            }
             index++;
             if(index == cycle) {
-                frame.timestamp = (long)(count++ * perFrameTime + timestamp);
-                List<Frame> frames = new ArrayList<>(times);
-                frames.add(frame);
                 for(int i = times - cycle; i > 0; i--) {
                     Frame f = frame.clone();
-                    f.timestamp = (long)(count++ * perFrameTime + timestamp);
+                    f.timestamp = (long)(++count * perFrameTime + timestamp);
                     frames.add(f);
                 }
                 index = 0;
-                chain.doFilter(context, frames);
             }
+            chain.doFilter(context, frames);
         }else {//加速
             if(index < cycle) {
                 if(points.contains(index)) {
-                    frame.timestamp = (long)(count-- * perFrameTime + timestamp);
+                    frame.timestamp = (long)(count * perFrameTime + timestamp);
+                    if(frame.timestamp < 0) {
+                        frame.timestamp = 0;
+                    }
                     chain.doFilter(context, frame);
+                }else {
+                    count--;
                 }
             }
             index++;
