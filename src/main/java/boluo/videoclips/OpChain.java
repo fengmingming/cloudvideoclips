@@ -2,12 +2,14 @@ package boluo.videoclips;
 
 import boluo.videoclips.commands.Op;
 import boluo.videoclips.commands.OpContext;
+import lombok.extern.slf4j.Slf4j;
 import org.bytedeco.javacv.Frame;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+@Slf4j
 public class OpChain {
 
     private final List<Op> ops;
@@ -40,6 +42,8 @@ public class OpChain {
         Optional<Op> opOpt = next();
         if(opOpt.isPresent()) {
             innerFilter(opOpt.get(), context, frame);
+        }else if(log.isDebugEnabled()) {
+            log.debug("the result of OpChain.next is not present");
         }
     }
 
@@ -47,6 +51,8 @@ public class OpChain {
         Optional<Op> opOpt = next();
         if(opOpt.isPresent()) {
             frames.forEach(frame -> innerFilter(opOpt.get(), context, frame));
+        }else if(log.isDebugEnabled()) {
+            log.debug("the result of OpChain.next is not present");
         }
     }
 

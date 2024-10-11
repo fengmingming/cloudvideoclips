@@ -65,10 +65,10 @@ public class VideoClipsService {
         }
         FrameGrabber grabber = null;
         FrameRecorder recorder = null;
+        List<Op> ops = new ArrayList<>(opList.size() + 1);
+        ops.addAll(opList);
+        ops.sort(Comparator.comparing(Op::order));
         try {
-            List<Op> ops = new ArrayList<>(opList.size() + 1);
-            ops.addAll(opList);
-            ops.sort(Comparator.comparing(Op::order));
             ops.forEach(Op::start);
             URL url = urlRepository.toURL(originUrl);
             grabber = ffmpegFactory.buildFrameGrabber(url);
@@ -105,17 +105,16 @@ public class VideoClipsService {
                 opChain.restart();
                 opChain.doFilter(opContext, frame);
             }
-            ops.forEach(Op::close);
             log.info("video clips (url {}) record completed", originUrl);
             return localURL;
         }catch (Throwable e) {
             throw new RuntimeException(e);
         }finally {
-            if(grabber != null) {
-                try {
-                    grabber.close();
-                } catch (FrameGrabber.Exception e) {
-                    log.warn("FFmpegFrameGrabber close fail", e);
+            for(Op op : ops) {
+                try{
+                    op.close();
+                }catch (Throwable e) {
+                    log.warn("op close fail {}", op.getClass(), e);
                 }
             }
             if(recorder != null) {
@@ -123,6 +122,13 @@ public class VideoClipsService {
                     recorder.close();
                 } catch (FrameRecorder.Exception e) {
                     log.warn("FFmpegFrameRecorder close fail", e);
+                }
+            }
+            if(grabber != null) {
+                try {
+                    grabber.close();
+                } catch (FrameGrabber.Exception e) {
+                    log.warn("FFmpegFrameGrabber close fail", e);
                 }
             }
         }
