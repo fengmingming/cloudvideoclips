@@ -48,10 +48,27 @@ public class TestVideoClips {
         VideoClipsCommand command = new VideoClipsCommand();
         SpeedOp op = new SpeedOp();
         op.setStartTime(10 * 1000 * 1000);
-        op.setEndTime(20 * 1000 * 1000);
-        op.setValue("0.75");
+        op.setEndTime(30 * 1000 * 1000);
+        op.setValue("0.25");
         command.setOps(List.of(op));
-        command.setUrl("/example.mp4");
+        command.setUrl("https://iv.docbook.com.cn/upload/20211122/efde8c3c87293ffb48f74501567c4a51.mp4");
+        command.setTargetUrls(List.of("/vc.mp4"));
+        clipService.videoClip(command);
+    }
+
+    @Test
+    public void testChromakey() {
+        VideoClipsCommand command = new VideoClipsCommand();
+        ChromakeyOp op = new ChromakeyOp();
+        op.setHmin(0);
+        op.setSmin(0);
+        op.setVmin(221);
+        op.setHmax(180);
+        op.setSmax(30);
+        op.setVmax(255);
+        op.setBackgroundUrl("https://q9.itc.cn/images01/20240518/00c8398e5c674f48baa09e816374e805.jpeg");
+        command.setOps(List.of(op));
+        command.setUrl("https://iv.docbook.com.cn/upload/20211122/efde8c3c87293ffb48f74501567c4a51.mp4");
         command.setTargetUrls(List.of("/vc.mp4"));
         clipService.videoClip(command);
     }
