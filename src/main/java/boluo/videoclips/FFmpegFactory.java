@@ -1,5 +1,6 @@
 package boluo.videoclips;
 
+import boluo.repositories.URLRepository;
 import jakarta.annotation.Resource;
 import lombok.Setter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -17,13 +18,17 @@ public class FFmpegFactory {
 
     @Resource
     private VideoClipsConfig vcConfig;
+    @Resource
+    private URLRepository urlRepository;
 
     public FrameGrabber buildFrameGrabber(URL url) {
-        FFmpegFrameGrabber grabber = null;
+        FFmpegFrameGrabber grabber;
         if("file".equalsIgnoreCase(url.getProtocol())) {
             grabber = new FFmpegFrameGrabber(new File(url.getPath()));
-        }else {
+        }else if("http".equalsIgnoreCase(url.getProtocol()) || "https".equalsIgnoreCase(url.getProtocol())){
             grabber = new FFmpegFrameGrabber(url);
+        }else {
+            grabber = new FFmpegFrameGrabber(urlRepository.inputStream(url));
         }
         return grabber;
     }
