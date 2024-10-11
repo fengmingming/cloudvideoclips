@@ -13,7 +13,8 @@ import org.bytedeco.javacv.Frame;
         @JsonSubTypes.Type(value = SpeedOp.class, name = "speed"),
         @JsonSubTypes.Type(value = MuteOp.class, name = "mute"),
         @JsonSubTypes.Type(value = ResizeOp.class, name = "resize"),
-        @JsonSubTypes.Type(value = ChromakeyOp.class, name = "chromakey"),})
+        @JsonSubTypes.Type(value = ChromakeyOp.class, name = "chromakey"),
+        @JsonSubTypes.Type(value = RotateOp.class, name = "rotate"),})
 public abstract class Op {
 
     public abstract void doFilter(OpContext context, Frame frame, OpChain chain);

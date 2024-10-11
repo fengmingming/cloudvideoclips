@@ -73,4 +73,15 @@ public class TestVideoClips {
         clipService.videoClip(command);
     }
 
+    @Test
+    public void testRotate() {
+        VideoClipsCommand command = new VideoClipsCommand();
+        RotateOp op = new RotateOp();
+        op.setAngle(45);
+        command.setOps(List.of(op));
+        command.setUrl("https://iv.docbook.com.cn/upload/20211122/efde8c3c87293ffb48f74501567c4a51.mp4");
+        command.setTargetUrls(List.of("/vc.mp4"));
+        clipService.videoClip(command);
+    }
+
 }
