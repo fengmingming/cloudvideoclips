@@ -1,6 +1,8 @@
 package boluo.videoclips;
 
 import boluo.repositories.URLRepository;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import jakarta.annotation.Resource;
 import lombok.Setter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -31,6 +33,16 @@ public class FFmpegFactory {
             grabber = new FFmpegFrameGrabber(urlRepository.inputStream(url));
         }
         return grabber;
+    }
+
+    public FrameRecorder buildAudioRecorder(URL url, FrameGrabber grabber) {
+        FrameRecorder recorder = innerBuildFrameRecorder(url, 0, 0, grabber.getAudioChannels());
+        recorder.setAudioBitrate(grabber.getAudioBitrate());
+        recorder.setAudioMetadata(grabber.getAudioMetadata());
+        recorder.setAudioOptions(grabber.getAudioOptions());
+        recorder.setAudioSideData(grabber.getAudioSideData());
+        recorder.setSampleRate(grabber.getSampleRate());
+        return recorder;
     }
 
     public FrameRecorder buildFrameRecorder(URL url, FrameGrabber grabber) {

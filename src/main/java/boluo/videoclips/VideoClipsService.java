@@ -155,12 +155,22 @@ public class VideoClipsService {
             grabber.start();
             FrameGrabber grabberFinal = grabber;
             recorder = (FFmpegFrameRecorder) ffmpegFactory.buildFrameRecorder(targetUrl, grabberFinal);
-            recorder.start(grabber.getFormatContext());
-            log.info("video transcode (url {}) (targetUrl {}) start completed", url, targetUrl);
+            String targetSuffix = FileUtil.getSuffix(targetUrl.getPath());
             long start = System.currentTimeMillis();
-            AVPacket packet;
-            while((packet = grabber.grabPacket()) != null) {
-                recorder.recordPacket(packet);
+            if("m3u8".equalsIgnoreCase(targetSuffix) || FileUtil.getSuffix(url.getPath()).equalsIgnoreCase(targetSuffix)) {
+                recorder.start(grabber.getFormatContext());
+                log.info("video transcode (url {}) (targetUrl {}) start completed", url, targetUrl);
+                AVPacket packet;
+                while((packet = grabber.grabPacket()) != null) {
+                    recorder.recordPacket(packet);
+                }
+            }else {
+                recorder.start();
+                log.info("video transcode (url {}) (targetUrl {}) start completed", url, targetUrl);
+                Frame frame;
+                while((frame = grabber.grab()) != null) {
+                    recorder.record(frame);
+                }
             }
             if(recorder instanceof LocalFFmpegFrameRecorder localRecorder) {
                 localRecorder.setComplete(true);

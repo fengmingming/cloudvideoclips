@@ -3,7 +3,6 @@ package boluo.videoclips.commands;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,7 +28,6 @@ public class VideoClipsCommand {
     /**
      * 目标文件地址
      * */
-    @Size(min = 1, message = "targetUrl is empty")
     @NotNull
     private List<String> targetUrls;
     private String callbackUrl;

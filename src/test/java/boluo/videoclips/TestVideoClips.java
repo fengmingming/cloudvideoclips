@@ -84,4 +84,33 @@ public class TestVideoClips {
         clipService.videoClip(command);
     }
 
+    @Test
+    public void testMute() {
+        VideoClipsCommand command = new VideoClipsCommand();
+        MuteOp op = new MuteOp();
+        command.setOps(List.of(op));
+        command.setUrl("https://iv.docbook.com.cn/upload/20211122/efde8c3c87293ffb48f74501567c4a51.mp4");
+        command.setTargetUrls(List.of());
+        clipService.videoClip(command);
+    }
+
+    @Test
+    public void testExtractAudio() {
+        VideoClipsCommand command = new VideoClipsCommand();
+        AudioExtractionOp op = new AudioExtractionOp();
+        op.setTargetUrl("/vc.mp3");
+        command.setOps(List.of(op));
+        command.setUrl("https://iv.docbook.com.cn/upload/20211122/efde8c3c87293ffb48f74501567c4a51.mp4");
+        command.setTargetUrls(List.of());
+        clipService.videoClip(command);
+    }
+
+    @Test
+    public void testCodec() {
+        VideoClipsCommand command = new VideoClipsCommand();
+        command.setUrl("https://iv.docbook.com.cn/upload/20211122/efde8c3c87293ffb48f74501567c4a51.mp4");
+        command.setTargetUrls(List.of("/vc.avi"));
+        clipService.videoClip(command);
+    }
+
 }
