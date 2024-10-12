@@ -1,8 +1,8 @@
 package boluo.videoclips;
 
+import boluo.common.RecorderConfig;
+import boluo.common.URLTool;
 import boluo.repositories.URLRepository;
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.StrUtil;
 import jakarta.annotation.Resource;
 import lombok.Setter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.net.URL;
+import java.util.Map;
 
 @Component
 @Setter
@@ -36,39 +37,62 @@ public class FFmpegFactory {
     }
 
     public FrameRecorder buildAudioRecorder(URL url, FrameGrabber grabber) {
+        RecorderConfig config = URLTool.buildQueryObj(url.getQuery());
         FrameRecorder recorder = innerBuildFrameRecorder(url, 0, 0, grabber.getAudioChannels());
-        recorder.setAudioBitrate(grabber.getAudioBitrate());
-        recorder.setAudioMetadata(grabber.getAudioMetadata());
-        recorder.setAudioOptions(grabber.getAudioOptions());
+        recorder.setAudioBitrate(config.getInt("audioBitrate", grabber.getAudioBitrate()));
+        recorder.setAudioMetadata(config.getMap("audioMetadata", grabber.getAudioMetadata()));
+        recorder.setAudioOptions(config.getMap("audioOptions", grabber.getAudioOptions()));
         recorder.setAudioSideData(grabber.getAudioSideData());
-        recorder.setSampleRate(grabber.getSampleRate());
+        recorder.setSampleRate(config.getInt("sampleRate", grabber.getSampleRate()));
+        Map<String, String> options = config.getMap("options", grabber.getOptions());
+        recorder.setOptions(options);
+        if(config.containsKey("format")) {
+            recorder.setFormat(config.getStr("format"));
+        }
+        if(config.containsKey("audioCodecName")) {
+            recorder.setAudioCodecName(config.getStr("audioCodecName"));
+        }
         return recorder;
     }
 
     public FrameRecorder buildFrameRecorder(URL url, FrameGrabber grabber) {
+        RecorderConfig config = URLTool.buildQueryObj(url.getQuery());
         FrameRecorder recorder = innerBuildFrameRecorder(url, grabber.getImageWidth(), grabber.getImageHeight(), grabber.getAudioChannels());
-        recorder.setVideoBitrate(grabber.getVideoBitrate());
-        recorder.setVideoCodec(grabber.getVideoCodec());
-        recorder.setVideoCodecName(grabber.getVideoCodecName());
-        recorder.setVideoMetadata(grabber.getVideoMetadata());
-        recorder.setVideoOptions(grabber.getVideoOptions());
+        recorder.setVideoBitrate(config.getInt("videoBitrate", grabber.getVideoBitrate()));
+        recorder.setVideoCodec(config.getInt("videoCodec", grabber.getVideoCodec()));
+        recorder.setVideoCodecName(config.getStr("videoCodecName", grabber.getVideoCodecName()));
+        recorder.setVideoMetadata(config.getMap("videoMetadata", grabber.getVideoMetadata()));
+        recorder.setVideoOptions(config.getMap("videoOptions", grabber.getVideoOptions()));
         recorder.setVideoSideData(grabber.getVideoSideData());
-        recorder.setFrameRate(grabber.getFrameRate());
-        recorder.setCharset(grabber.getCharset());
-        recorder.setAudioBitrate(grabber.getAudioBitrate());
-        recorder.setAudioCodec(grabber.getAudioCodec());
-        recorder.setAudioCodecName(grabber.getAudioCodecName());
-        recorder.setAudioMetadata(grabber.getAudioMetadata());
-        recorder.setAudioOptions(grabber.getAudioOptions());
+        recorder.setFrameRate(config.getDouble("frameRate", grabber.getFrameRate()));
+        recorder.setCharset(config.getCharset("charset", grabber.getCharset()));
+        recorder.setAudioBitrate(config.getInt("audioBitrate", grabber.getAudioBitrate()));
+        recorder.setAudioCodec(config.getInt("audioCodec", grabber.getAudioCodec()));
+        recorder.setAudioCodecName(config.getStr("audioCodecName", grabber.getAudioCodecName()));
+        recorder.setAudioMetadata(config.getMap("audioMetadata", grabber.getAudioMetadata()));
+        recorder.setAudioOptions(config.getMap("audioOptions", grabber.getAudioOptions()));
         recorder.setAudioSideData(grabber.getAudioSideData());
-        recorder.setSampleRate(grabber.getSampleRate());
+        recorder.setSampleRate(config.getInt("sampleRate", grabber.getSampleRate()));
+        Map<String, String> options = config.getMap("options", grabber.getOptions());
+        recorder.setOptions(options);
+        if(config.containsKey("format")) {
+            recorder.setFormat(config.getStr("format"));
+        }
         if(url.getPath().endsWith("m3u8") || url.getPath().endsWith("M3U8")) {
-            recorder.setGopSize((int) grabber.getFrameRate());
+            recorder.setGopSize(config.getInt("gopSize", (int) grabber.getFrameRate()));
             recorder.setFormat("hls");
-            recorder.setOption("hls_time", "10");
-            recorder.setOption("hls_list_size", "0");
-            recorder.setOption("hls_segment_type", "mpegts");
-            recorder.setOption("hls_flags", "independent_segments");
+            if(!options.containsKey("hls_time")) {
+                recorder.setOption("hls_time", "10");
+            }
+            if(!options.containsKey("hls_list_size")) {
+                recorder.setOption("hls_list_size", "0");
+            }
+            if(!options.containsKey("hls_segment_type")) {
+                recorder.setOption("hls_segment_type", "mpegts");
+            }
+            if(!options.containsKey("hls_flags")) {
+                recorder.setOption("hls_flags", "independent_segments");
+            }
         }
         return recorder;
     }

@@ -4,6 +4,7 @@ import boluo.common.SpringContext;
 import boluo.repositories.URLRepository;
 import boluo.videoclips.FFmpegFactory;
 import boluo.videoclips.FrameGrabStarter;
+import boluo.videoclips.LocalFFmpegFrameRecorder;
 import boluo.videoclips.OpChain;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
@@ -24,16 +25,17 @@ public class AudioExtractionOp extends Op implements FrameGrabStarter {
     @NotBlank(message = "targetUrl is empty")
     private String targetUrl;
     @Setter @Getter
-    private String codecName;
+    private String audioCodecName;
     @Setter @Getter
     private String format;
     private FrameRecorder recorder;
 
     @Override
     public void start() {
-        String suffix = FileUtil.getSuffix(targetUrl).toLowerCase();
+        URLRepository repository = SpringContext.getBean(URLRepository.class);
+        String suffix = FileUtil.getSuffix(repository.toURL(targetUrl).getPath()).toLowerCase();
         if(!List.of("mp3", "wav", "aac", "ogg").contains(suffix)) {
-            throw new IllegalArgumentException("");
+            throw new IllegalArgumentException(suffix + " is not supported");
         }
     }
 
@@ -42,8 +44,8 @@ public class AudioExtractionOp extends Op implements FrameGrabStarter {
         URLRepository repository = SpringContext.getBean(URLRepository.class);
         FFmpegFactory factory = SpringContext.getBean(FFmpegFactory.class);
         recorder = factory.buildAudioRecorder(repository.toURL(targetUrl), grabber);
-        if(StrUtil.isNotBlank(codecName)) {
-            recorder.setAudioCodecName(codecName);
+        if(StrUtil.isNotBlank(audioCodecName)) {
+            recorder.setAudioCodecName(audioCodecName);
         }
         if(StrUtil.isNotBlank(format)) {
             recorder.setFormat(format);
@@ -65,6 +67,13 @@ public class AudioExtractionOp extends Op implements FrameGrabStarter {
             }
         }
         chain.doFilter(context, frame);
+    }
+
+    @Override
+    public void complete() {
+        if(recorder instanceof LocalFFmpegFrameRecorder localRecorder) {
+            localRecorder.setComplete(true);
+        }
     }
 
     @Override

@@ -106,6 +106,7 @@ public class VideoClipsService {
                 opChain.doFilter(opContext, frame);
             }
             log.info("video clips (url {}) record completed", originUrl);
+            ops.forEach(Op::complete);
             return localURL;
         }catch (Throwable e) {
             throw new RuntimeException(e);

@@ -26,4 +26,6 @@ public abstract class Op {
 
     public int order() {return 0;}
 
+    public void complete() {}
+
 }

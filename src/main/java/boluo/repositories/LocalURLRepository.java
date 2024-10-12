@@ -2,13 +2,13 @@ package boluo.repositories;
 
 import boluo.videoclips.VideoClipsConfig;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.core.util.URLUtil;
 import jakarta.annotation.Resource;
 import lombok.Setter;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 
 @Component
@@ -63,7 +63,11 @@ public class LocalURLRepository implements URLRepository {
         if(url.startsWith("file:")) {
             url = url.substring(5);
         }
-        return URLUtil.url(vcConfig.getLocalRoot() + url);
+        try {
+            return new URL("file", null, -1, vcConfig.getLocalRoot() + url, new NullURLStreamHandler());
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
