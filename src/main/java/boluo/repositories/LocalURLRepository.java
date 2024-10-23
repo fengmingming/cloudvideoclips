@@ -1,5 +1,6 @@
 package boluo.repositories;
 
+import boluo.common.FileTool;
 import boluo.videoclips.VideoClipsConfig;
 import cn.hutool.core.util.StrUtil;
 import jakarta.annotation.Resource;
@@ -20,7 +21,7 @@ public class LocalURLRepository implements URLRepository {
 
     @Override
     public boolean support(URL url) {
-        return "file".equalsIgnoreCase(url.getProtocol());
+        return FileTool.isLocalURL(url);
     }
 
     @Override

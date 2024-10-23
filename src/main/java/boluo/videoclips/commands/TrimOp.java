@@ -18,8 +18,11 @@ public class TrimOp extends Op {
     @Override
     public void doFilter(OpContext context, Frame frame, OpChain chain) {
         long timestamp = frame.timestamp;
-        if(timestamp >= startTime && timestamp <= endTime) {
+        if(timestamp >= startTime && timestamp < endTime) {
             return;
+        }
+        if(timestamp >= endTime) {
+            frame.timestamp = timestamp - endTime + startTime;
         }
         chain.doFilter(context, frame);
     }

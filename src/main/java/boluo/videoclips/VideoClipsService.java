@@ -9,6 +9,7 @@ import boluo.videoclips.commands.VideoClipsCommand;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.URLUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -19,6 +20,9 @@ import org.bytedeco.javacv.*;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -137,9 +141,16 @@ public class VideoClipsService {
 
     protected void transcode(URL url, List<String> targets) {
         try{
+            String urlSuffix = FileUtil.getSuffix(url.getPath());
             List<URL> targetUrls = targets.stream().map(it -> urlRepository.toURL(it)).toList();
             for(URL targetUrl : targetUrls) {
-                doTranscode(url, targetUrl);
+                if(urlSuffix.equalsIgnoreCase(FileUtil.getSuffix(targetUrl.getPath()))) { //相同后缀文件处理 file:copy,remote:upload
+                    try(InputStream input = new FileInputStream(url.getPath())) {
+                        urlRepository.upload(targetUrl, input);
+                    }
+                }else {//不同文件后缀处理
+                    doTranscode(url, targetUrl);
+                }
             }
         }catch (Throwable e) {
             throw new RuntimeException(e);
@@ -156,22 +167,12 @@ public class VideoClipsService {
             grabber.start();
             FrameGrabber grabberFinal = grabber;
             recorder = (FFmpegFrameRecorder) ffmpegFactory.buildFrameRecorder(targetUrl, grabberFinal);
-            String targetSuffix = FileUtil.getSuffix(targetUrl.getPath());
             long start = System.currentTimeMillis();
-            if("m3u8".equalsIgnoreCase(targetSuffix) || FileUtil.getSuffix(url.getPath()).equalsIgnoreCase(targetSuffix)) {
-                recorder.start(grabber.getFormatContext());
-                log.info("video transcode (url {}) (targetUrl {}) start completed", url, targetUrl);
-                AVPacket packet;
-                while((packet = grabber.grabPacket()) != null) {
-                    recorder.recordPacket(packet);
-                }
-            }else {
-                recorder.start();
-                log.info("video transcode (url {}) (targetUrl {}) start completed", url, targetUrl);
-                Frame frame;
-                while((frame = grabber.grab()) != null) {
-                    recorder.record(frame);
-                }
+            recorder.start();
+            log.info("video transcode (url {}) (targetUrl {}) start completed", url, targetUrl);
+            Frame frame;
+            while((frame = grabber.grab()) != null) {
+                recorder.record(frame);
             }
             if(recorder instanceof LocalFFmpegFrameRecorder localRecorder) {
                 localRecorder.setComplete(true);

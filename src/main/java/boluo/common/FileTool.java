@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter;
 public class FileTool {
 
     public static void deleteLocalTmpFile(URL url) {
-        if("file".equalsIgnoreCase(url.getProtocol())) {
+        if(isLocalURL(url)) {
             File file = new File(url.getPath());
             VideoClipsConfig videoClipsConfig = SpringContext.getBean(VideoClipsConfig.class);
             if(FileUtil.isSub(videoClipsConfig.getTmpFileDir(), file)) {
@@ -31,6 +31,10 @@ public class FileTool {
         VideoClipsConfig videoClipsConfig = SpringContext.getBean(VideoClipsConfig.class);
         return String.format("%s/%s/%s.%s", videoClipsConfig.getTmpDir(), LocalDateTime.now().format(formatter),
                 IdUtil.fastSimpleUUID(), suffix);
+    }
+
+    public static boolean isLocalURL(URL url) {
+        return "file".equalsIgnoreCase(url.getProtocol());
     }
 
 }

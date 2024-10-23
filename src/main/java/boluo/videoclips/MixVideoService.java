@@ -1,6 +1,7 @@
 package boluo.videoclips;
 
 import boluo.common.FileTool;
+import boluo.common.FrameTool;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.URLUtil;
 import jakarta.annotation.Resource;
@@ -13,7 +14,9 @@ import org.springframework.stereotype.Component;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.TreeMap;
 
 @Setter
 @Component
@@ -45,9 +48,9 @@ public class MixVideoService {
             URL localURL = URLUtil.url(FileTool.buildTmpFile(FileUtil.getSuffix(url.getPath())));
             recorder = ffmpegFactory.buildFrameRecorder(localURL, grabber);
             recorder.start();
-            copyFrame(grabber, recorder);
+            FrameTool.copyFrame(grabber, recorder);
             for(FrameGrabber other : concatGrabbers) {
-                copyFrame(other, recorder);
+                FrameTool.copyFrame(other, recorder);
             }
             return localURL;
         }catch (Throwable e) {
@@ -102,12 +105,16 @@ public class MixVideoService {
             Frame frame;
             List<Frame> frames = new ArrayList<>(urls.size() + 1);
             while((frame = grabber.grab()) != null) {
-                frames.add(frame);
-                for(FrameGrabber g : grabbers) {
-                    frames.add(g.grab());
+                if(frame.image == null) {
+                    recorder.record(frame);
+                }else {
+                    frames.add(frame);
+                    for(FrameGrabber g : grabbers) {
+                        frames.add(FrameTool.nextVideo(g));
+                    }
+                    assemble(frames);
+                    frames.clear();
                 }
-                assemble(frames);
-                frames.clear();
             }
             return localUrl;
         }catch (Throwable e) {
@@ -140,17 +147,28 @@ public class MixVideoService {
         }
     }
 
-    /**
-     *
-     * */
-    protected void copyFrame(FrameGrabber grabber, FrameRecorder recorder) throws Exception {
-        Frame frame;
-        while((frame = grabber.grab()) != null) {
-            recorder.record(frame);
+    protected void assemble(List<Frame> frames) {
+        switch (frames.size()) {
+            case 2 -> layout1_1(frames);
+            case 3 -> layout1_2(frames);
+            case 4 -> layout2_2(frames);
+            default -> defLayout(frames);
         }
     }
 
-    protected void assemble(List<Frame> frames) {
+    protected void layout1_1(List<Frame> frames) {
+
+    }
+
+    protected void layout1_2(List<Frame> frames) {
+
+    }
+
+    protected void layout2_2(List<Frame> frames) {
+
+    }
+
+    protected void defLayout(List<Frame> frames) {
 
     }
 

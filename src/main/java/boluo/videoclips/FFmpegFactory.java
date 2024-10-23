@@ -1,5 +1,6 @@
 package boluo.videoclips;
 
+import boluo.common.FileTool;
 import boluo.common.RecorderConfig;
 import boluo.common.URLTool;
 import boluo.repositories.URLRepository;
@@ -26,7 +27,7 @@ public class FFmpegFactory {
 
     public FrameGrabber buildFrameGrabber(URL url) {
         FFmpegFrameGrabber grabber;
-        if("file".equalsIgnoreCase(url.getProtocol())) {
+        if(FileTool.isLocalURL(url)) {
             grabber = new FFmpegFrameGrabber(new File(url.getPath()));
         }else if("http".equalsIgnoreCase(url.getProtocol()) || "https".equalsIgnoreCase(url.getProtocol())){
             grabber = new FFmpegFrameGrabber(url);
@@ -98,7 +99,7 @@ public class FFmpegFactory {
     }
 
     protected FrameRecorder innerBuildFrameRecorder(URL targetUrl, int imageWidth, int imageHeight, int audioChannels) {
-        if("file".equalsIgnoreCase(targetUrl.getProtocol())) {
+        if(FileTool.isLocalURL(targetUrl)) {
             File file = new File(targetUrl.getPath());
             if(!file.getParentFile().exists()) {
                 file.getParentFile().mkdirs();

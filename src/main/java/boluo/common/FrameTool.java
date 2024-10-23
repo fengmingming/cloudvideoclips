@@ -1,6 +1,8 @@
 package boluo.common;
 
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.FrameRecorder;
 import org.bytedeco.javacv.Java2DFrameUtils;
 import org.bytedeco.opencv.global.opencv_core;
 import org.bytedeco.opencv.global.opencv_imgproc;
@@ -32,6 +34,45 @@ public class FrameTool {
         Mat rotationMat = opencv_imgproc.getRotationMatrix2D(center, angle, 1.0);
         opencv_imgproc.warpAffine(s, s, rotationMat, size);
         return Java2DFrameUtils.toFrame(s);
+    }
+
+    public static Frame nextVideo(FrameGrabber grabber) {
+        Frame frame = null;
+        try{
+            while((frame = grabber.grab()) != null) {
+                if(frame.image != null) {
+                    break;
+                }
+            }
+            return frame;
+        }catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Frame nextAudio(FrameGrabber grabber) {
+        Frame frame = null;
+        try{
+            while((frame = grabber.grab()) != null) {
+                if(frame.samples != null) {
+                    break;
+                }
+            }
+            return frame;
+        }catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void copyFrame(FrameGrabber grabber, FrameRecorder recorder) {
+        Frame frame;
+        try{
+            while((frame = grabber.grab()) != null) {
+                recorder.record(frame);
+            }
+        }catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
